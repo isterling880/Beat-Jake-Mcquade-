@@ -1,71 +1,128 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Jelly-Bean-Killer-9000: GLOBAL EDITION</title>
+    <title>JB-9000 | AI TERMINAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        body { font-family: 'Courier New', monospace; background: #000; color: #0f0; padding: 20px; }
-        #console { border: 2px solid #0f0; padding: 20px; min-height: 300px; box-shadow: 0 0 15px #0f0; }
-        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; width: 100%; font-size: 1.2em; outline: none; }
-        .stats { margin-top: 20px; color: #fff; border-top: 1px solid #444; pt: 10px; }
-        .loading { color: orange; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        #terminal { background: #000; border: 2px solid #00ff41; height: 85vh; display: flex; flex-direction: column; box-shadow: 0 0 20px #004411; }
+        #output { flex-grow: 1; overflow-y: auto; padding: 20px; white-space: pre-wrap; line-height: 1.4; }
+        #input-area { display: flex; padding: 15px; border-top: 1px solid #00ff41; background: #0a0a0a; }
+        #prompt { color: #00ff41; font-weight: bold; margin-right: 10px; }
+        #user-input { background: transparent; border: none; color: #fff; font-family: inherit; font-size: 18px; flex-grow: 1; outline: none; }
+        .ai-text { color: #00ff41; }
+        .system-text { color: #888; font-style: italic; }
+        .highlight { color: #ffff00; font-weight: bold; }
+        .error { color: #ff4444; }
     </style>
 </head>
 <body>
 
-    <h1>JELLY-BEAN-KILLER-9000 [v4.0]</h1>
-    <p>STATUS: <span id="status" class="loading">SYNCING WITH SATELLITE...</span></p>
-
-    <div id="console">
-        <input type="text" id="citySearch" placeholder="ENTER CITY NAME (e.g. Austin, Savannah, New York)..." disabled>
-        <div id="output"></div>
+<div id="terminal">
+    <div id="output"><span class="system-text">--- JELLY-BEAN-KILLER-9000 BOOT SEQUENCE COMPLETE ---</span>
+<span class="ai-text">AI CORE: ONLINE. DATASET: 2024 CENSUS.
+TYPE '1' FOR TOP CITIES OR ASK ME A QUESTION.</span></div>
+    <div id="input-area">
+        <span id="prompt">SYSTEM@JB9000:~$</span>
+        <input type="text" id="user-input" autofocus autocomplete="off">
     </div>
+</div>
 
-    <script>
-        let cityData = [];
-        const csvFile = "SUB-IP-EST2024-POP.xlsx - SUB-IP-EST2024-POP.csv";
+<script>
+    let cityData = [];
+    const csvFile = "SUB-IP-EST2024-POP.xlsx - SUB-IP-EST2024-POP.csv";
+    const outputDiv = document.getElementById('output');
+    const inputField = document.getElementById('user-input');
 
-        // LOAD EVERYTHING AT ONCE FROM GITHUB
-        Papa.parse(csvFile, {
-            download: true,
-            header: false, // File has complex headers, we handle manually
-            skipEmptyLines: true,
-            complete: function(results) {
-                // Process the raw data (starting from row 5 where cities begin)
-                cityData = results.data.slice(5).map(row => ({
-                    name: row[0],
-                    pop2024: row[6],
-                    pop2020: row[2]
-                })).filter(c => c.name && c.pop2024);
+    // 1. LOAD THE DATA FROM GITHUB
+    Papa.parse(csvFile, {
+        download: true,
+        complete: function(results) {
+            cityData = results.data.slice(5)
+                .map(row => ({ name: row[0], pop: parseInt(row[6]), base: parseInt(row[2]) }))
+                .filter(c => c.name && !isNaN(c.pop))
+                .sort((a, b) => b.pop - a.pop);
+            print("SATELLITE SYNC SUCCESSFUL. " + cityData.length.toLocaleString() + " TARGETS LOADED.", "system-text");
+        }
+    });
 
-                document.getElementById('status').innerText = "ONLINE - " + cityData.length + " CITIES LOADED";
-                document.getElementById('status').className = "";
-                document.getElementById('citySearch').disabled = false;
-            }
-        });
-
-        document.getElementById('citySearch').addEventListener('input', function(e) {
-            const query = e.target.value.toLowerCase();
-            const output = document.getElementById('output');
+    // 2. THE INPUT HANDLER
+    inputField.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const val = inputField.value.trim();
+            if (val === "") return;
             
-            if (query.length < 2) { output.innerHTML = ""; return; }
+            print(`<br>> ${val}`, "highlight"); // Show what you typed
+            inputField.value = "";
+            
+            // Artificial "Thinking" Delay
+            setTimeout(() => {
+                processCommand(val);
+            }, 300);
+        }
+    });
 
-            const matches = cityData.filter(c => c.name.toLowerCase().includes(query)).slice(0, 5);
+    // 3. THE "BRAIN" (THE PROCESS COMMAND FUNCTION)
+    function processCommand(input) {
+        const cmd = input.toLowerCase();
 
+        // COMMAND: "1" (Your favorite!)
+        if (cmd === "1") {
+            print("AI ANALYSIS: RETRIEVING TOP 10 US MEGACITIES...");
+            cityData.slice(0, 10).forEach((c, i) => {
+                print(`${i+1}. ${c.name} | Population: ${c.pop.toLocaleString()}`);
+            });
+        }
+        
+        // COMMAND: SEARCH (e.g. "search Texas" or just "Texas")
+        else if (cmd.includes("search") || cityData.some(c => cmd.length > 3 && c.name.toLowerCase().includes(cmd))) {
+            const target = cmd.replace("search", "").trim();
+            const matches = cityData.filter(c => c.name.toLowerCase().includes(target)).slice(0, 5);
+            
             if (matches.length > 0) {
-                output.innerHTML = matches.map(m => `
-                    <div class="stats">
-                        <h3>TARGET IDENTIFIED: ${m.name}</h3>
-                        <p>2024 POPULATION ESTIMATE: ${parseInt(m.pop2024).toLocaleString()}</p>
-                        <p>2020 CENSUS BASE: ${parseInt(m.pop2020).toLocaleString()}</p>
-                        <p>THREAT LEVEL: ${parseInt(m.pop2024) > 1000000 ? 'CRITICAL' : 'STABLE'}</p>
-                    </div>
-                `).join('');
+                print(`FOUND ${matches.length} MATCHES FOR "${target.toUpperCase()}":`);
+                matches.forEach(m => print(` - ${m.name}: ${m.pop.toLocaleString()} residents`));
             } else {
-                output.innerHTML = "<p>NO CITY MATCHES IN DATABASE.</p>";
+                print(`NO DATA FOUND FOR "${target}". CHECK SPELLING.`, "error");
             }
-        });
-    </script>
+        }
+
+        // COMMAND: STATS
+        else if (cmd.includes("stats") || cmd.includes("data")) {
+            print("SYSTEM STATISTICS:");
+            print(`- Total Entries: ${cityData.length}`);
+            print(`- Largest Target: ${cityData[0].name}`);
+            print(`- Smallest Target: ${cityData[cityData.length-1].name}`);
+        }
+
+        // COMMAND: HELP
+        else if (cmd === "help") {
+            print("AI COMMAND SET:");
+            print(" '1' - List Top 10 Cities");
+            print(" '[City Name]' - Search for population");
+            print(" 'stats' - View database health");
+            print(" 'clear' - Wipe the screen");
+        }
+
+        else if (cmd === "clear") {
+            outputDiv.innerHTML = "";
+        }
+
+        // DEFAULT AI RESPONSE
+        else {
+            print(`AI RESPONSE: I AM UNFAMILIAR WITH THE COMMAND "${input.toUpperCase()}". TYPE 'HELP' FOR ASSISTANCE.`, "error");
+        }
+    }
+
+    // Helper to print text to the terminal
+    function print(text, className = "ai-text") {
+        const div = document.createElement('div');
+        div.className = className;
+        div.innerHTML = text;
+        outputDiv.appendChild(div);
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+    }
+</script>
+
 </body>
 </html>
