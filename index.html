@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jelly-Bean-Killer-9000: GLOBAL EDITION</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #000; color: #0f0; padding: 20px; }
+        #console { border: 2px solid #0f0; padding: 20px; min-height: 300px; box-shadow: 0 0 15px #0f0; }
+        input { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; width: 100%; font-size: 1.2em; outline: none; }
+        .stats { margin-top: 20px; color: #fff; border-top: 1px solid #444; pt: 10px; }
+        .loading { color: orange; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <h1>JELLY-BEAN-KILLER-9000 [v4.0]</h1>
+    <p>STATUS: <span id="status" class="loading">SYNCING WITH SATELLITE...</span></p>
+
+    <div id="console">
+        <input type="text" id="citySearch" placeholder="ENTER CITY NAME (e.g. Austin, Savannah, New York)..." disabled>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let cityData = [];
+        const csvFile = "SUB-IP-EST2024-POP.xlsx - SUB-IP-EST2024-POP.csv";
+
+        // LOAD EVERYTHING AT ONCE FROM GITHUB
+        Papa.parse(csvFile, {
+            download: true,
+            header: false, // File has complex headers, we handle manually
+            skipEmptyLines: true,
+            complete: function(results) {
+                // Process the raw data (starting from row 5 where cities begin)
+                cityData = results.data.slice(5).map(row => ({
+                    name: row[0],
+                    pop2024: row[6],
+                    pop2020: row[2]
+                })).filter(c => c.name && c.pop2024);
+
+                document.getElementById('status').innerText = "ONLINE - " + cityData.length + " CITIES LOADED";
+                document.getElementById('status').className = "";
+                document.getElementById('citySearch').disabled = false;
+            }
+        });
+
+        document.getElementById('citySearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            const output = document.getElementById('output');
+            
+            if (query.length < 2) { output.innerHTML = ""; return; }
+
+            const matches = cityData.filter(c => c.name.toLowerCase().includes(query)).slice(0, 5);
+
+            if (matches.length > 0) {
+                output.innerHTML = matches.map(m => `
+                    <div class="stats">
+                        <h3>TARGET IDENTIFIED: ${m.name}</h3>
+                        <p>2024 POPULATION ESTIMATE: ${parseInt(m.pop2024).toLocaleString()}</p>
+                        <p>2020 CENSUS BASE: ${parseInt(m.pop2020).toLocaleString()}</p>
+                        <p>THREAT LEVEL: ${parseInt(m.pop2024) > 1000000 ? 'CRITICAL' : 'STABLE'}</p>
+                    </div>
+                `).join('');
+            } else {
+                output.innerHTML = "<p>NO CITY MATCHES IN DATABASE.</p>";
+            }
+        });
+    </script>
+</body>
+</html>
